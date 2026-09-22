@@ -1,0 +1,5 @@
+variantes/
+
+__pycache__/
+*.pyc
+_prueba*.html

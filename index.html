@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cubo AR — Corazón humano</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+  <!-- aframe-extras aporta 'animation-mixer', necesario para reproducir el clip
+       'latido' embebido en el GLB (A-Frame por si solo no reproduce clips). -->
+  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.5.4/dist/aframe-extras.min.js"></script>
+  <style>
+    .aviso {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+      background: rgba(0,0,0,.65); color: #fff; font-family: sans-serif;
+      font-size: 14px; text-align: center; padding: 6px;
+    }
+    .error {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
+      background: rgba(150,0,0,.85); color: #fff; font-family: sans-serif;
+      font-size: 13px; text-align: center; padding: 8px; display: none;
+    }
+  </style>
+  <script>
+    // Escala cualquier GLB para que quepa sobre el marcador y lo centra
+    AFRAME.registerComponent('ajustar', {
+      schema: { tam: { default: 1.2 } },
+      init: function () {
+        this.el.addEventListener('model-loaded', () => {
+          const malla = this.el.getObject3D('mesh');
+          if (!malla) return;
+          const caja = new THREE.Box3().setFromObject(malla);
+          const dims = caja.getSize(new THREE.Vector3());
+          const mayor = Math.max(dims.x, dims.y, dims.z);
+          const s = this.data.tam / mayor;
+          this.el.object3D.scale.setScalar(s);
+          const centro = caja.getCenter(new THREE.Vector3());
+          this.el.object3D.position.set(
+            -centro.x * s,
+            -caja.min.y * s + 0.05,
+            -centro.z * s
+          );
+        });
+      }
+    });
+
+    // Entorno de estudio (IBL). Sin mapa de entorno los materiales PBR de
+    // three.js salen planos: un corazon con brillo humedo parece de cartulina.
+    // Se genera por codigo con PMREMGenerator (sin HDRI externo) y se aplica a
+    // toda la escena.
+    AFRAME.registerComponent('entorno-estudio', {
+      init: function () {
+        const escena = this.el;
+        const crear = () => {
+          if (this.hecho || !escena.renderer) { return; }
+          this.hecho = true;
+          const pmrem = new THREE.PMREMGenerator(escena.renderer);
+          const sala = new THREE.Scene();
+          const cubo = new THREE.BoxGeometry();
+          // Caja envolvente clara: hace de luz ambiente del entorno
+          const envolvente = new THREE.Mesh(cubo, new THREE.MeshStandardMaterial({
+            color: 0xb8c0cc, emissive: new THREE.Color(0xb8c0cc),
+            emissiveIntensity: 0.17, roughness: 1, metalness: 0,
+            side: THREE.BackSide
+          }));
+          envolvente.scale.set(12, 7, 12);
+          sala.add(envolvente);
+          // Paneles emisivos: dan forma a los reflejos especulares
+          const panel = function (color, fuerza, px, py, pz, sx, sy, sz) {
+            const m = new THREE.Mesh(cubo, new THREE.MeshStandardMaterial({
+              color: 0x000000, emissive: new THREE.Color(color),
+              emissiveIntensity: fuerza, roughness: 1, metalness: 0,
+              side: THREE.DoubleSide
+            }));
+            m.position.set(px, py, pz);
+            m.scale.set(sx, sy, sz);
+            sala.add(m);
+          };
+          panel(0xffffff, 1.8,  0.0,  3.1,  0.0, 7.0, 0.1, 7.0);  // cenital
+          panel(0xdce8ff, 0.9, -4.4,  0.6,  0.0, 0.1, 4.0, 7.0);  // relleno frio
+          panel(0xffe8cc, 0.7,  4.4,  0.4,  0.0, 0.1, 4.0, 7.0);  // relleno calido
+          panel(0xffffff, 0.6,  0.0,  0.5, -4.4, 7.0, 4.0, 0.1);  // fondo
+          escena.object3D.environment = pmrem.fromScene(sala, 0.03).texture;
+          pmrem.dispose();
+        };
+        if (escena.renderStarted) { crear(); }
+        else { escena.addEventListener('renderstart', crear); }
+      }
+    });
+
+    // Sombra de apoyo bajo el modelo, enganchada a 'model-loaded' (burbujea
+    // hasta la escena, asi que no hay que tocar el marcador).
+    AFRAME.registerComponent('sombras-auto', {
+      schema: { tam: { default: 2.4 }, opacidad: { default: 0.32 } },
+      init: function () {
+        this.el.addEventListener('model-loaded', (ev) => {
+          const entidad = ev.target;
+          const malla = entidad.getObject3D('mesh');
+          if (!malla) { return; }
+          malla.traverse(function (nodo) {
+            if (nodo.isMesh) { nodo.castShadow = true; nodo.receiveShadow = true; }
+          });
+          const marcador = entidad.parentEl;
+          if (!marcador || marcador.dataset.sombraPuesta) { return; }
+          marcador.dataset.sombraPuesta = '1';
+          const suelo = new THREE.Mesh(
+            new THREE.PlaneGeometry(this.data.tam, this.data.tam),
+            new THREE.ShadowMaterial({ opacity: this.data.opacidad })
+          );
+          suelo.rotation.x = -Math.PI / 2;
+          suelo.position.y = 0.002;
+          suelo.receiveShadow = true;
+          marcador.object3D.add(suelo);
+        });
+      }
+    });
+
+    // Diagnostico: si el GLB no esta publicado todavia, o el clip no se llama
+    // 'latido', se avisa por pantalla en vez de dejar el marcador vacio.
+    AFRAME.registerComponent('diagnostico-modelo', {
+      init: function () {
+        const caja = document.querySelector('.error');
+        this.el.addEventListener('model-error', function () {
+          caja.textContent = 'No se ha podido cargar modelos/corazon.glb. Compruebe que el archivo existe y recargue.';
+          caja.style.display = 'block';
+        });
+        this.el.addEventListener('model-loaded', function (ev) {
+          const clips = (ev.detail.model && ev.detail.model.animations) || [];
+          const nombres = clips.map(function (c) { return c.name; });
+          console.log('[corazon] clips del GLB:', nombres.join(', ') || '(ninguno)');
+          if (nombres.indexOf('latido') === -1) {
+            caja.textContent = 'El GLB ha cargado pero no trae el clip "latido" (' +
+                               (nombres.join(', ') || 'sin animaciones') + '): el corazon no latira.';
+            caja.style.display = 'block';
+          }
+        });
+      }
+    });
+  </script>
+</head>
+<body style="margin:0; overflow:hidden">
+  <div class="aviso">Cubo AR — Corazón humano · Apunte la cámara a la cara del marcador</div>
+  <div class="error"></div>
+
+  <a-scene embedded
+           arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false;"
+           renderer="colorManagement: true;"
+           shadow="type: pcfsoft; autoUpdate: true"
+           entorno-estudio
+           sombras-auto
+           vr-mode-ui="enabled: false">
+
+    <a-assets timeout="30000">
+      <!-- ?v=N es el cache-busting: SUBIR ESE NUMERO en cada publicacion del GLB
+           (ver README), si no el navegador sigue mostrando la version antigua. -->
+      <a-asset-item id="m-corazon" src="modelos/corazon.glb?v=1"></a-asset-item>
+    </a-assets>
+
+    <!-- Iluminacion de estudio: ambiente suave + hemisferica + luz clave con
+         sombra + relleno frio. El modelado fino de la luz lo pone el mapa de
+         entorno del componente 'entorno-estudio'. -->
+    <a-entity light="type: ambient; color: #ffffff; intensity: 0.18"></a-entity>
+    <a-entity light="type: hemisphere; color: #dfe8f7; groundColor: #4a443c; intensity: 0.32"></a-entity>
+    <a-entity id="luz-clave"
+              light="type: directional; color: #fff4e6; intensity: 0.85;
+                     castShadow: true; shadowMapWidth: 1024; shadowMapHeight: 1024;
+                     shadowCameraLeft: -2; shadowCameraRight: 2;
+                     shadowCameraTop: 2; shadowCameraBottom: -2;
+                     shadowCameraNear: 0.1; shadowCameraFar: 12;
+                     shadowBias: -0.0012; shadowRadius: 3"
+              position="1.6 3.2 1.8"></a-entity>
+    <a-entity light="type: directional; color: #cfe0ff; intensity: 0.22" position="-2.2 1.4 -1.6"></a-entity>
+
+    <!-- Unica cara con modelo: corazon latiendo (clip 'latido', 72 lpm).
+         Los rotulos usan la fuente MSDF propia de fuentes/ para poder llevar
+         tildes (la fuente por defecto de A-Frame no las dibuja). -->
+    <a-marker type="barcode" value="0">
+      <a-entity gltf-model="#m-corazon"
+                ajustar
+                diagnostico-modelo
+                animation-mixer="clip: latido; loop: repeat"></a-entity>
+      <a-text value="Corazón humano"
+              font="fuentes/dejavu-es.json" shader="msdf" negate="false"
+              position="0 1.62 0" align="center" color="#FFFFFF" width="3.6"></a-text>
+      <a-text value="Latido en tiempo real · 72 lpm"
+              font="fuentes/dejavu-es.json" shader="msdf" negate="false"
+              position="0 1.38 0" align="center" color="#FFD9DE" width="2.6"></a-text>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+</body>
+</html>

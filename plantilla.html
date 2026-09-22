@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Plantilla Cubo AR — Corazón humano (6 cm)</title>
+  <style>
+    @page { size: A4 portrait; margin: 8mm; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 0; }
+
+    .instrucciones { font-size: 11px; margin: 4mm 0; }
+    .instrucciones h1 { font-size: 15px; margin: 0 0 2mm; }
+    @media print { .no-imprimir { display: none; } }
+
+    .red {
+      display: grid;
+      grid-template-columns: repeat(3, 60mm);
+      grid-template-rows: repeat(4, 60mm);
+      margin: 10mm auto 0;
+      width: 180mm;
+    }
+    .cara {
+      border: 0.4mm solid #000;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+    }
+    .cara img { width: 42mm; height: 42mm; image-rendering: pixelated; }
+    .cara img.qr { image-rendering: auto; }
+    .cara .nombre {
+      font-size: 10px; font-weight: bold; margin-top: 1.5mm;
+      text-transform: uppercase; letter-spacing: .5px; text-align: center;
+    }
+    .titulo { text-align: center; }
+    .titulo .grande { font-size: 19px; font-weight: bold; line-height: 1.2; color: #8c1c24; }
+    .titulo .peq { font-size: 11px; margin-top: 2mm; }
+    .titulo .lpm { font-size: 9px; margin-top: 2mm; color: #555; }
+
+    .teoria { padding: 3.5mm; justify-content: flex-start; }
+    .teoria h2 {
+      font-size: 10.5px; margin: 0 0 1.5mm; text-align: center;
+      text-transform: uppercase; letter-spacing: .4px; color: #8c1c24;
+    }
+    .teoria ul { margin: 0; padding-left: 3.5mm; font-size: 8.3px; line-height: 1.35; }
+    .teoria li { margin-bottom: 0.4mm; }
+    .teoria .sub {
+      font-weight: bold; margin-top: 1.2mm; font-size: 8.8px;
+      list-style: none; margin-left: -3.5mm;
+    }
+
+    .arriba   { grid-column: 2; grid-row: 1; }
+    .izq      { grid-column: 1; grid-row: 2; }
+    .frente   { grid-column: 2; grid-row: 2; }
+    .der      { grid-column: 3; grid-row: 2; }
+    .abajo    { grid-column: 2; grid-row: 3; }
+    .atras    { grid-column: 2; grid-row: 4; }
+
+    .p { position: absolute; background: #eee; border: 0.3mm dashed #888; }
+    .p-arriba { left: 6mm; right: 6mm; top: -10mm; height: 10mm;
+                clip-path: polygon(0 100%, 12% 0, 88% 0, 100% 100%); }
+    .p-abajo  { left: 6mm; right: 6mm; bottom: -10mm; height: 10mm;
+                clip-path: polygon(0 0, 12% 100%, 88% 100%, 100% 0); }
+    .p-izq    { top: 6mm; bottom: 6mm; left: -10mm; width: 10mm;
+                clip-path: polygon(100% 0, 0 12%, 0 88%, 100% 100%); }
+    .p-der    { top: 6mm; bottom: 6mm; right: -10mm; width: 10mm;
+                clip-path: polygon(0 0, 100% 12%, 100% 88%, 0 100%); }
+  </style>
+</head>
+<body>
+  <div class="instrucciones">
+    <h1>Cubo AR — Corazón humano &nbsp;·&nbsp; Ciclo cardíaco y anatomía (FP sanitaria)</h1>
+    <b>Montaje:</b> 1) Imprimir a tamaño real (100 %, sin ajustar a página). 2) Recortar por el borde exterior
+    incluyendo las pestañas grises. 3) Doblar por todas las líneas. 4) Pegar las pestañas por dentro.<br>
+    <b>Uso:</b> escanear el QR para abrir el visor y apuntar la cámara a la cara del marcador: se verá el
+    <b>corazón en 3D latiendo</b> a 72 lpm. Las otras tres caras llevan la teoría impresa.
+    <span class="no-imprimir"><b>(Esta hoja se imprime desde el navegador: Ctrl+P → Guardar como PDF.)</b></span>
+  </div>
+
+  <div class="red">
+    <div class="cara arriba">
+      <img class="qr" src="qr-visor.png" alt="QR del visor AR">
+      <div class="nombre">Escanéame → visor AR</div>
+      <div class="p p-arriba"></div>
+    </div>
+
+    <div class="cara izq teoria">
+      <h2>Cámaras y válvulas</h2>
+      <ul>
+        <li class="sub">Cavidades (4)</li>
+        <li><b>Aurícula derecha:</b> recibe las venas cavas superior e inferior y el seno coronario.</li>
+        <li><b>Ventrículo derecho:</b> pared fina, impulsa a baja presión (≈ 25/5 mmHg).</li>
+        <li><b>Aurícula izquierda:</b> recibe las 4 venas pulmonares (sangre oxigenada).</li>
+        <li><b>Ventrículo izquierdo:</b> pared gruesa, impulsa a alta presión (≈ 120/8 mmHg).</li>
+        <li class="sub">Válvulas (4)</li>
+        <li><b>Tricúspide</b> (AV derecha): AD → VD.</li>
+        <li><b>Pulmonar</b> (sigmoidea): VD → tronco pulmonar.</li>
+        <li><b>Mitral o bicúspide</b> (AV izquierda): AI → VI.</li>
+        <li><b>Aórtica</b> (sigmoidea): VI → aorta.</li>
+        <li>El tabique interventricular separa ambos circuitos.</li>
+      </ul>
+      <div class="p p-arriba"></div>
+      <div class="p p-izq"></div>
+      <div class="p p-abajo"></div>
+    </div>
+
+    <div class="cara frente">
+      <img src="marcadores/marker-0.png" alt="Marcador del corazón">
+      <div class="nombre">Corazón humano<br>(3D · latido)</div>
+    </div>
+
+    <div class="cara der teoria">
+      <h2>Ciclo cardíaco</h2>
+      <ul>
+        <li>Duración del ciclo ≈ 0,8 s a 75 lpm.</li>
+        <li class="sub">Sístole</li>
+        <li><b>Auricular</b> (≈ 0,1 s): completa el 20-30 % del llenado ventricular.</li>
+        <li><b>Ventricular</b> (≈ 0,3 s): contracción isovolumétrica — se cierran las AV (1.<sup>er</sup> ruido, <i>lub</i>) — y eyección al abrirse las sigmoideas.</li>
+        <li class="sub">Diástole</li>
+        <li><b>Ventricular</b> (≈ 0,4 s): relajación isovolumétrica — se cierran las sigmoideas (2.º ruido, <i>dup</i>) — y llenado pasivo rápido.</li>
+        <li>Las válvulas AV y las sigmoideas nunca están abiertas a la vez.</li>
+        <li class="sub">Sistema de conducción</li>
+        <li>Nódulo sinusal → nódulo AV → haz de His → fibras de Purkinje.</li>
+      </ul>
+      <div class="p p-arriba"></div>
+      <div class="p p-der"></div>
+      <div class="p p-abajo"></div>
+    </div>
+
+    <div class="cara abajo titulo">
+      <div class="grande">CUBO AR<br>CORAZÓN HUMANO</div>
+      <div class="peq">Anatomía cardíaca y ciclo cardíaco<br>FP — Familia Sanidad</div>
+      <div class="lpm">Modelo 3D animado a 72 lpm · marcador barcode 3×3 n.º 0</div>
+    </div>
+
+    <div class="cara atras teoria">
+      <h2>Circulación y valores</h2>
+      <ul>
+        <li class="sub">Circulación menor (pulmonar)</li>
+        <li>VD → arterias pulmonares → capilares alveolares (<b>hematosis</b>) → 4 venas pulmonares → AI.</li>
+        <li class="sub">Circulación mayor (sistémica)</li>
+        <li>VI → aorta → arterias → capilares tisulares → venas cavas → AD.</li>
+        <li>Las coronarias nacen de la raíz aórtica y se llenan en diástole.</li>
+        <li class="sub">Valores normales en el adulto</li>
+        <li>FC en reposo <b>60-100 lpm</b> (bradicardia &lt; 60; taquicardia &gt; 100).</li>
+        <li>Volumen sistólico 60-80 mL · FE 55-70 %.</li>
+        <li>Gasto cardíaco = VS × FC ≈ <b>5 L/min</b> · PA &lt; 120/80 mmHg.</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
