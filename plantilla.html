@@ -3,10 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <title>Plantilla Cubo AR — Corazón humano (6 cm)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <style>
     @page { size: A4 portrait; margin: 8mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; margin: 0; }
+    body { font-family: 'Source Sans 3', Arial, sans-serif; margin: 0; color: #1a1a1a; }
+    .instrucciones h1, .cara .nombre, .titulo .grande, .teoria h2 { font-family: 'Montserrat', Arial, sans-serif; }
+    .titulo .grande { font-weight: 800; letter-spacing: .3px; }
+    .teoria .sub { color: #8c1c24; }
 
     .instrucciones { font-size: 11px; margin: 4mm 0; }
     .instrucciones h1 { font-size: 15px; margin: 0 0 2mm; }
@@ -44,13 +50,13 @@
       font-size: 10.5px; margin: 0 0 1.5mm; text-align: center;
       text-transform: uppercase; letter-spacing: .4px; color: #8c1c24;
     }
-    .teoria ul { margin: 0; padding-left: 3.5mm; font-size: 8.3px; line-height: 1.35; }
+    .teoria ul { margin: 0; padding-left: 3.5mm; font-size: 8.6px; line-height: 1.32; }
     .teoria li { margin-bottom: 0.4mm; }
     .teoria sup { font-size: .7em; line-height: 0; }
     .der.teoria ul { line-height: 1.25; }
     .der.teoria .sub { margin-top: 0.8mm; }
     .teoria .sub {
-      font-weight: bold; margin-top: 1.2mm; font-size: 8.8px;
+      font-weight: bold; margin-top: 1.2mm; font-size: 9px;
       list-style: none; margin-left: -3.5mm;
     }
 
@@ -148,7 +154,7 @@
         <li>Las coronarias nacen de la raíz aórtica y se llenan en diástole.</li>
         <li class="sub">Valores normales en el adulto</li>
         <li>FC en reposo <b>60-100 lpm</b> (bradicardia &lt; 60; taquicardia &gt; 100).</li>
-        <li>Volumen sistólico 60-80 mL · FE 55-70 %.</li>
+        <li>Volumen sistólico 60-80 mL · FE <span style="white-space:nowrap">55-70 %</span>.</li>
         <li>Gasto cardíaco = VS × FC ≈ <b>5 L/min</b> · PA &lt; 120/80 mmHg.</li>
       </ul>
     </div>
