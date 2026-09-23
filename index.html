@@ -47,8 +47,218 @@
       font-size: 12px; padding: 5px 10px; border-radius: 6px; max-width: 60vw;
       text-align: right;
     }
+    /* Boton de rotulos: a la izquierda, para no tapar el del sonido */
+    #boton-nombres {
+      position: fixed; left: 12px; bottom: 14px; z-index: 1000;
+      background: rgba(20,24,32,.88); color: #fff;
+      border: 2px solid rgba(255,255,255,.65); border-radius: 30px;
+      padding: 11px 18px; cursor: pointer;
+      font-family: sans-serif; font-size: 15px; font-weight: bold;
+      box-shadow: 0 3px 10px rgba(0,0,0,.45);
+    }
+    #boton-nombres.apagado { background: rgba(70,70,76,.9); font-weight: normal; }
   </style>
   <script>
+    // Rotulos de anatomia. p = punto de la superficie en coordenadas del GLB
+    // (sacado por raycast en Blender desde la vista anterior). Color = sangre
+    // que transporta: rojo oxigenada, azul no oxigenada.
+    const ROJO = '#ff5b5b', AZUL = '#5aa9ff';
+    const ROTULOS = [
+      { t: 'Vena cava\nsuperior',   p: [-0.0261,  0.0594, 0.0120], c: AZUL },
+      { t: 'Venas\npulmonares',     p: [-0.0432,  0.0248, 0.0047], c: ROJO },
+      { t: 'Aurícula\nderecha',     p: [-0.0317, -0.0059, 0.0325], c: AZUL },
+      { t: 'Ventrículo\nderecho',   p: [ 0.0050, -0.0139, 0.0331], c: AZUL },
+      { t: 'Vena cava\ninferior',   p: [-0.0297, -0.0673, 0.0118], c: AZUL },
+      { t: 'Aorta',                 p: [-0.0050,  0.0465, 0.0142], c: ROJO },
+      { t: 'Tronco\npulmonar',      p: [ 0.0063,  0.0238, 0.0175], c: AZUL },
+      { t: 'Aurícula\nizquierda',   p: [ 0.0234,  0.0129, 0.0080], c: ROJO },
+      { t: 'Arteria\ncoronaria',    p: [ 0.0297, -0.0139, 0.0234], c: ROJO },
+      { t: 'Ventrículo\nizquierdo', p: [ 0.0396, -0.0337, 0.0244], c: ROJO }
+    ];
+
+    // Cartel que siempre mira a la camara (se lee aunque se gire el cubo)
+    AFRAME.registerComponent('mirar-camara', {
+      init: function () { this.v = new THREE.Vector3(); },
+      tick: function () {
+        const cam = this.el.sceneEl.camera;
+        if (!cam) { return; }
+        cam.getWorldPosition(this.v);
+        this.el.object3D.lookAt(this.v);
+      }
+    });
+
+    // Punto + linea + cartel por rotulo. Los carteles se recolocan en cada
+    // fotograma en dos columnas a los lados del corazon TAL COMO LO VE LA
+    // CAMARA: con el cubo en la mano el marcador se ve de frente, de lado o
+    // inclinado, y unos rotulos fijos al modelo se amontonarian. Los que
+    // quedan en la cara de atras del corazon se ocultan.
+    AFRAME.registerComponent('rotulos', {
+      init: function () {
+        this.items = null;
+        this.visibles = true;
+        this.el.addEventListener('model-loaded', () => { setTimeout(() => this.crear(), 0); });
+      },
+      crear: function () {
+        if (this.items) { return; }
+        const T = THREE.Vector3;
+        const o = this.el.object3D, s = o.scale.x, pos = o.position;
+        const m = this.el.parentEl.object3D;
+        this.marcador = m;
+        // Caja del modelo en el espacio del marcador
+        m.updateMatrixWorld(true);
+        const cw = new THREE.Box3().setFromObject(this.el.getObject3D('mesh'));
+        const caja = new THREE.Box3();
+        for (let i = 0; i < 8; i++) {
+          caja.expandByPoint(m.worldToLocal(new T(i & 1 ? cw.max.x : cw.min.x,
+                                                  i & 2 ? cw.max.y : cw.min.y,
+                                                  i & 4 ? cw.max.z : cw.min.z)));
+        }
+        const centro = this.centro = caja.getCenter(new T());
+        this.esquinas = [];
+        for (let i = 0; i < 8; i++) {
+          this.esquinas.push(new T(i & 1 ? caja.max.x : caja.min.x,
+                                   i & 2 ? caja.max.y : caja.min.y,
+                                   i & 4 ? caja.max.z : caja.min.z));
+        }
+        const grupo = document.createElement('a-entity');
+        this.el.parentEl.appendChild(grupo);
+        this.grupo = grupo;
+        const CAR = 0.052, LINEA = 0.085;   // ancho medio de letra y alto de linea
+        this.items = ROTULOS.map(function (r) {
+          const a = new T(r.p[0], r.p[1], r.p[2]).multiplyScalar(s).add(pos);
+          const punto = new THREE.Mesh(new THREE.SphereGeometry(0.018, 14, 10),
+                                       new THREE.MeshBasicMaterial({ color: r.c }));
+          punto.position.copy(a);
+          const geo = new THREE.BufferGeometry().setFromPoints([a, a.clone()]);
+          const linea = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: r.c }));
+          grupo.object3D.add(punto, linea);
+
+          const filas = r.t.split('\n');
+          const ancho = Math.max.apply(null, filas.map(function (f) { return f.length; })) * CAR + 0.1;
+          const alto = filas.length * LINEA + 0.06;
+          const cartel = document.createElement('a-entity');
+          cartel.setAttribute('mirar-camara', '');
+          const fondo = document.createElement('a-plane');
+          fondo.setAttribute('width', ancho);
+          fondo.setAttribute('height', alto);
+          fondo.setAttribute('material', 'shader: flat; color: #12151c; opacity: 0.8; transparent: true');
+          const franja = document.createElement('a-plane');
+          franja.setAttribute('width', 0.024);
+          franja.setAttribute('height', alto);
+          franja.setAttribute('material', 'shader: flat; transparent: true; color: ' + r.c);
+          const texto = document.createElement('a-text');
+          texto.setAttribute('value', r.t);
+          texto.setAttribute('font', 'fuentes/dejavu-es.json');
+          texto.setAttribute('shader', 'msdf');
+          texto.setAttribute('negate', 'false');
+          texto.setAttribute('align', 'center');
+          texto.setAttribute('anchor', 'center');
+          texto.setAttribute('baseline', 'center');
+          texto.setAttribute('color', '#FFFFFF');
+          texto.setAttribute('width', 1.2);
+          texto.setAttribute('wrap-count', 22);
+          cartel.appendChild(fondo);
+          cartel.appendChild(franja);
+          cartel.appendChild(texto);
+          grupo.appendChild(cartel);
+          return { a: a, fuera: a.clone().sub(centro).normalize(), punto: punto, linea: linea,
+                   geo: geo, cartel: cartel, fondo: fondo, franja: franja, texto: texto,
+                   ancho: ancho, alto: alto, lado: 0, ladoCartel: 0 };
+        });
+        grupo.object3D.visible = this.visibles;
+      },
+      tick: function () {
+        if (!this.items || !this.visibles) { return; }
+        const cam = this.el.sceneEl.camera;
+        const m = this.marcador;
+        if (!cam || !m.visible) { return; }
+        m.updateMatrixWorld();
+        const T = THREE.Vector3;
+        const camPos = cam.getWorldPosition(new T());
+        const q = cam.getWorldQuaternion(new THREE.Quaternion());
+        const der = new T(1, 0, 0).applyQuaternion(q), arr = new T(0, 1, 0).applyQuaternion(q);
+        const C = m.localToWorld(this.centro.clone());
+        const escala = m.getWorldScale(new T()).x;
+        const haciaCam = camPos.clone().sub(C).normalize();
+        const giro = m.getWorldQuaternion(new THREE.Quaternion());
+        // Semiancho del corazon en pantalla
+        let semi = 0;
+        this.esquinas.forEach(function (e) {
+          semi = Math.max(semi, Math.abs(m.localToWorld(e.clone()).sub(C).dot(der)));
+        });
+        // Rotulos siempre por encima: que no los tape el propio corazon ni el
+        // plano de la sombra. El texto MSDF se crea cuando carga la fuente, asi
+        // que se repasa hasta que aparece su malla.
+        if (!this.encima) {
+          let listo = true;
+          this.items.forEach(function (it) {
+            if (it.encima) { return; }
+            let texto = false;
+            [it.punto, it.linea, it.cartel.object3D].forEach(function (raiz) {
+              raiz.traverse(function (n) {
+                if (!n.material) { return; }
+                n.material.depthTest = false;
+                const el = n.parent && n.parent.el;
+                n.renderOrder = el === it.texto ? 1003 : el === it.franja ? 1002 : 1001;
+                if (n.geometry && n.geometry.type !== 'PlaneGeometry' && raiz === it.cartel.object3D) { texto = true; }
+              });
+            });
+            it.punto.renderOrder = it.linea.renderOrder = 1000;
+            it.encima = texto;
+            listo = listo && texto;
+          });
+          this.encima = listo;
+        }
+        const columnas = { '-1': [], '1': [] };
+        this.items.forEach(function (it) {
+          const d = m.localToWorld(it.a.clone()).sub(C);
+          const fuera = it.fuera.clone().applyQuaternion(giro);
+          it.oculto = fuera.dot(haciaCam) < -0.35;      // en la cara de atras
+          const x = d.dot(der);
+          // Histeresis: que un temblor del marcador no lo cambie de columna
+          if (it.lado === 0 || Math.abs(x) > 0.08 * escala) { it.lado = x < 0 ? -1 : 1; }
+          it.u = d.dot(arr);
+          if (!it.oculto) { columnas[it.lado].push(it); }
+          it.cartel.object3D.visible = !it.oculto;
+          it.punto.visible = !it.oculto;
+          it.linea.visible = !it.oculto;
+        });
+        const margen = 0.12 * escala;
+        [-1, 1].forEach(function (lado) {
+          const col = columnas[lado].sort(function (p1, p2) { return p2.u - p1.u; });
+          // Reparto sin solapes, de arriba abajo, y luego se recentra la
+          // columna (desplazar todos por igual no crea solapes nuevos)
+          let tope = Infinity, suma = 0;       // tope = borde inferior del anterior
+          col.forEach(function (it) {
+            const media = it.alto / 2 * escala;
+            it.v = Math.min(it.u, tope - media);
+            tope = it.v - media - 0.035 * escala;
+            suma += it.u - it.v;
+          });
+          const sube = col.length ? suma / col.length : 0;
+          col.forEach(function (it) {
+            const L = C.clone().addScaledVector(der, lado * (semi + margen))
+                               .addScaledVector(arr, it.v + sube);
+            const local = m.worldToLocal(L);
+            it.cartel.object3D.position.copy(local);
+            it.geo.attributes.position.setXYZ(1, local.x, local.y, local.z);
+            it.geo.attributes.position.needsUpdate = true;
+            if (it.ladoCartel !== lado) {           // el cartel crece hacia fuera
+              it.ladoCartel = lado;
+              const dx = lado * it.ancho / 2;
+              it.fondo.object3D.position.set(dx, 0, -0.002);
+              it.franja.object3D.position.set(lado * 0.012, 0, -0.001);
+              it.texto.object3D.position.set(dx, 0, 0.001);
+            }
+          });
+        });
+      },
+      mostrar: function (v) {
+        this.visibles = v;
+        if (this.grupo) { this.grupo.object3D.visible = v; }
+      }
+    });
+
     // Escala cualquier GLB para que quepa sobre el marcador y lo centra
     AFRAME.registerComponent('ajustar', {
       schema: { tam: { default: 1.2 } },
@@ -169,6 +379,7 @@
   <div class="aviso">Cubo AR — Corazón humano · Apunte la cámara a la cara del marcador</div>
   <div class="error"></div>
 
+  <button id="boton-nombres">Nombres: sí</button>
   <div id="pista-sonido">Cargando el sonido del latido…</div>
   <button id="boton-sonido" disabled>
     <span class="icono">♪</span><span id="texto-sonido">Sonido: cargando…</span>
@@ -211,6 +422,7 @@
                 gltf-model="#m-corazon"
                 ajustar
                 diagnostico-modelo
+                rotulos
                 animation-mixer="clip: latido; loop: repeat"></a-entity>
       <a-text value="Corazón humano"
               font="fuentes/dejavu-es.json" shader="msdf" negate="false"
@@ -293,6 +505,19 @@
           decir('El audio del latido no está disponible; el modelo se ve igual.');
           setTimeout(function () { decir(''); }, 6000);
         }
+      });
+    })();
+
+    // Mostrar / ocultar los nombres de las partes
+    (function () {
+      var boton = document.getElementById('boton-nombres');
+      var entidad = document.getElementById('corazon');
+      var ver = true;
+      boton.addEventListener('click', function () {
+        ver = !ver;
+        entidad.components.rotulos.mostrar(ver);
+        boton.textContent = ver ? 'Nombres: sí' : 'Nombres: no';
+        boton.classList.toggle('apagado', !ver);
       });
     })();
   </script>
