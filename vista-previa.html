@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corazon humano - vista previa</title>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<script src="audio-latido.js?v=1"></script>
+<style>
+  :root{
+    --fondo:#14161a; --panel:#1e2228; --borde:#2f353e;
+    --texto:#e8eaed; --suave:#9aa3ad; --acento:#c0392b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fondo);color:var(--texto);
+       font-family:"Segoe UI",system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}
+  header{padding:14px 20px;border-bottom:1px solid var(--borde);display:flex;
+         align-items:baseline;gap:14px;flex-wrap:wrap}
+  h1{margin:0;font-size:19px;font-weight:600}
+  header span{color:var(--suave);font-size:13px}
+  main{flex:1;display:flex;min-height:0}
+  model-viewer{flex:1;height:100%;min-height:0;background:radial-gradient(circle at 50% 40%,#232830,#101215)}
+  aside{width:290px;border-left:1px solid var(--borde);background:var(--panel);
+        padding:18px;overflow-y:auto;font-size:13px;line-height:1.55}
+  aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;
+           color:var(--suave);margin:22px 0 8px;font-weight:600}
+  aside h2:first-child{margin-top:0}
+  .fila{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #262b33}
+  .fila b{font-weight:600}
+  .botones{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  button{background:#2a3038;color:var(--texto);border:1px solid var(--borde);
+         border-radius:6px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{background:#343b45}
+  button.on{background:var(--acento);border-color:var(--acento)}
+  ul{margin:6px 0;padding-left:18px}
+  li{margin:4px 0}
+  .aviso{margin-top:18px;padding:10px;border-left:3px solid var(--acento);
+         background:#22262c;color:var(--suave);font-size:12px}
+  .nota{color:var(--suave);font-size:12px;margin-top:7px}
+  button[disabled]{opacity:.55;cursor:default}
+  #sonido{font-weight:600}
+  @media (max-width:860px){main{flex-direction:column}aside{width:auto;border-left:0;border-top:1px solid var(--borde)}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Corazón humano · vista previa</h1>
+  <span>Arrastre para girar · rueda para acercar · botón derecho para desplazar</span>
+</header>
+
+<main>
+  <model-viewer id="mv"
+    src="modelos/corazon.glb?v=1"
+    alt="Corazón humano latiendo"
+    camera-controls
+    touch-action="pan-y"
+    autoplay
+    animation-name="latido"
+    shadow-intensity="1"
+    shadow-softness="0.8"
+    exposure="1.05"
+    environment-image="neutral"
+    camera-orbit="25deg 75deg auto"
+    field-of-view="28deg"
+    min-camera-orbit="auto auto 5%"
+    max-camera-orbit="auto auto 400%">
+  </model-viewer>
+
+  <aside>
+    <h2>Velocidad del latido</h2>
+    <div class="botones">
+      <button data-v="1" class="on">72 lpm (real)</button>
+      <button data-v="0.5">Mitad</button>
+      <button data-v="0.25">Cámara lenta</button>
+      <button id="pausa">Pausa</button>
+    </div>
+
+    <h2>Sonido</h2>
+    <div class="botones">
+      <button id="sonido" disabled>Sonido: cargando…</button>
+    </div>
+    <div class="nota" id="nota-sonido">Auscultación sincronizada con el latido.</div>
+
+    <h2>Vistas</h2>
+    <div class="botones">
+      <button data-orbit="25deg 75deg auto">Anterior</button>
+      <button data-orbit="205deg 75deg auto">Posterior</button>
+      <button data-orbit="90deg 75deg auto">Lateral izq.</button>
+      <button data-orbit="25deg 20deg auto">Grandes vasos</button>
+      <button id="giro">Giro automático</button>
+    </div>
+
+    <h2>Ficha del modelo</h2>
+    <div class="fila"><span>Archivo</span><b>corazon.glb</b></div>
+    <div class="fila"><span>Peso</span><b>2,77 MB</b></div>
+    <div class="fila"><span>Triángulos</span><b>67.496</b></div>
+    <div class="fila"><span>Animación</span><b>latido</b></div>
+    <div class="fila"><span>Ciclo</span><b>0,833 s · 72 lpm</b></div>
+    <div class="fila"><span>Altura</span><b>15,5 cm con vasos</b></div>
+    <div class="fila"><span>Licencia</span><b>CC0</b></div>
+
+    <h2>El ciclo, tiempo a tiempo</h2>
+    <ul>
+      <li><b>0,00 s</b> — diástole, ventrículo lleno</li>
+      <li><b>0,10 s</b> — sístole auricular (patada)</li>
+      <li><b>0,40 s</b> — sístole máxima: la base baja y el ápex gira</li>
+      <li><b>0,53 s</b> — relajación isovolumétrica</li>
+      <li><b>0,70 s</b> — llenado rápido → diástasis</li>
+    </ul>
+
+    <div class="aviso">
+      Póngalo en <b>cámara lenta</b> y mire la raíz de la aorta: en sístole el
+      plano auriculoventricular <b>desciende</b> y deja más aorta al descubierto.
+      Ese descenso, y no un encogimiento uniforme, es la señal de que el latido
+      está bien hecho.
+    </div>
+  </aside>
+</main>
+
+<script>
+  const mv = document.getElementById('mv');
+
+  document.querySelectorAll('[data-v]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('[data-v]').forEach(o => o.classList.remove('on'));
+      b.classList.add('on');
+      mv.timeScale = parseFloat(b.dataset.v);
+      mv.play();
+      document.getElementById('pausa').textContent = 'Pausa';
+      refrescarSonido();
+    });
+  });
+
+  document.getElementById('pausa').addEventListener('click', e => {
+    if (mv.paused) { mv.play(); e.target.textContent = 'Pausa'; }
+    else { mv.pause(); e.target.textContent = 'Reanudar'; }
+    refrescarSonido();
+  });
+
+  document.querySelectorAll('[data-orbit]').forEach(b => {
+    b.addEventListener('click', () => mv.cameraOrbit = b.dataset.orbit);
+  });
+
+  document.getElementById('giro').addEventListener('click', e => {
+    mv.autoRotate = !mv.autoRotate;
+    e.target.classList.toggle('on', mv.autoRotate);
+  });
+
+  mv.addEventListener('load', () => {
+    console.log('[vista-previa] animaciones:', mv.availableAnimations);
+  });
+  mv.addEventListener('error', e => {
+    console.error('[vista-previa] error al cargar el GLB', e);
+  });
+
+  /* Sonido de auscultacion -----------------------------------------------
+     - El navegador exige un gesto: el primer clic del boton es el que
+       arranca el audio.
+     - Velocidad: a 72 lpm y a la mitad el audio sigue la misma velocidad con
+       playbackRate (y sin conservar el tono, como una grabacion ralentizada
+       de verdad). En camara lenta (0,25x) se silencia: a esa velocidad el
+       latido deja de sonar a latido y solo estorba.
+     - Con Pausa el audio se para.
+     - La sincronia se corrige contra mv.currentTime, el reloj real de la
+       animacion del GLB.
+  ----------------------------------------------------------------------- */
+  const audio = crearAudioLatido({ version: '1' });
+  const bSonido = document.getElementById('sonido');
+  const notaSonido = document.getElementById('nota-sonido');
+  let quiereSonido = false;
+
+  const velocidadActual = () => {
+    const b = document.querySelector('[data-v].on');
+    return b ? parseFloat(b.dataset.v) : 1;
+  };
+
+  function refrescarSonido() {
+    if (!audio.disponible) { return; }
+    const v = velocidadActual();
+    const lento = v < 0.5;                       // camara lenta: sin sonido
+    const debe = quiereSonido && !mv.paused && !lento;
+
+    audio.velocidad(v);
+    if (debe && !audio.sonando) { audio.arrancar(mv.currentTime); }
+    if (!debe && audio.sonando) { audio.parar(); }
+
+    bSonido.classList.toggle('on', quiereSonido);
+    bSonido.textContent = quiereSonido ? 'Sonido: activado' : 'Activar sonido del latido';
+    if (quiereSonido && lento) {
+      notaSonido.textContent = 'En cámara lenta el sonido se silencia (a 0,25x deja de parecer un latido).';
+    } else if (quiereSonido && mv.paused) {
+      notaSonido.textContent = 'Animación en pausa: el sonido también está parado.';
+    } else if (quiereSonido) {
+      notaSonido.textContent = 'Auscultación sincronizada con el latido' +
+                               (v < 1 ? ' (a la mitad de velocidad).' : ' a 72 lpm.');
+    } else {
+      notaSonido.textContent = 'Pulse para oír la auscultación sincronizada con el latido.';
+    }
+  }
+
+  bSonido.addEventListener('click', () => {
+    if (!audio.disponible) { return; }
+    quiereSonido = !quiereSonido;
+    if (quiereSonido) { audio.arrancar(mv.currentTime).then(refrescarSonido); }
+    refrescarSonido();
+  });
+
+  audio.listo.then(ok => {
+    if (ok) {
+      bSonido.disabled = false;
+      audio.vigilar(() => mv.currentTime);
+      refrescarSonido();
+    } else {
+      bSonido.disabled = true;
+      bSonido.textContent = 'Sonido no disponible';
+      notaSonido.textContent = 'El archivo de auscultación no está disponible todavía; ' +
+                               'el resto de la vista previa funciona igual.';
+    }
+  });
+</script>
+</body>
+</html>

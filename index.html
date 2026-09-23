@@ -9,6 +9,8 @@
   <!-- aframe-extras aporta 'animation-mixer', necesario para reproducir el clip
        'latido' embebido en el GLB (A-Frame por si solo no reproduce clips). -->
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.5.4/dist/aframe-extras.min.js"></script>
+  <!-- Sonido de auscultacion sincronizado con el clip 'latido' -->
+  <script src="audio-latido.js?v=1"></script>
   <style>
     .aviso {
       position: fixed; top: 0; left: 0; right: 0; z-index: 999;
@@ -19,6 +21,31 @@
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
       background: rgba(150,0,0,.85); color: #fff; font-family: sans-serif;
       font-size: 13px; text-align: center; padding: 8px; display: none;
+    }
+    /* Boton de sonido: grande y siempre visible, porque el primer toque del
+       usuario es lo unico que desbloquea el audio en el navegador. */
+    #boton-sonido {
+      position: fixed; right: 12px; bottom: 14px; z-index: 1000;
+      display: flex; align-items: center; gap: 9px;
+      background: rgba(140,28,36,.92); color: #fff;
+      border: 2px solid rgba(255,255,255,.65); border-radius: 30px;
+      padding: 11px 18px 11px 14px; cursor: pointer;
+      font-family: sans-serif; font-size: 15px; font-weight: bold;
+      box-shadow: 0 3px 10px rgba(0,0,0,.45);
+    }
+    #boton-sonido.activo { background: rgba(26,120,60,.92); }
+    #boton-sonido[disabled] { background: rgba(70,70,76,.9); border-color: rgba(255,255,255,.3);
+                              cursor: default; font-weight: normal; font-size: 13px; }
+    #boton-sonido .icono {
+      width: 26px; height: 26px; border-radius: 50%; flex: none;
+      background: rgba(255,255,255,.18); display: flex;
+      align-items: center; justify-content: center; font-size: 13px;
+    }
+    #pista-sonido {
+      position: fixed; right: 12px; bottom: 66px; z-index: 1000;
+      background: rgba(0,0,0,.6); color: #fff; font-family: sans-serif;
+      font-size: 12px; padding: 5px 10px; border-radius: 6px; max-width: 60vw;
+      text-align: right;
     }
   </style>
   <script>
@@ -142,6 +169,11 @@
   <div class="aviso">Cubo AR — Corazón humano · Apunte la cámara a la cara del marcador</div>
   <div class="error"></div>
 
+  <div id="pista-sonido">Cargando el sonido del latido…</div>
+  <button id="boton-sonido" disabled>
+    <span class="icono">♪</span><span id="texto-sonido">Sonido: cargando…</span>
+  </button>
+
   <a-scene embedded
            arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false;"
            renderer="colorManagement: true;"
@@ -174,8 +206,9 @@
     <!-- Unica cara con modelo: corazon latiendo (clip 'latido', 72 lpm).
          Los rotulos usan la fuente MSDF propia de fuentes/ para poder llevar
          tildes (la fuente por defecto de A-Frame no las dibuja). -->
-    <a-marker type="barcode" value="0">
-      <a-entity gltf-model="#m-corazon"
+    <a-marker id="marcador-corazon" type="barcode" value="0">
+      <a-entity id="corazon"
+                gltf-model="#m-corazon"
                 ajustar
                 diagnostico-modelo
                 animation-mixer="clip: latido; loop: repeat"></a-entity>
@@ -189,5 +222,79 @@
 
     <a-entity camera></a-entity>
   </a-scene>
+
+  <script>
+    /* Sonido de auscultacion ---------------------------------------------
+       Reglas:
+       - El audio solo suena si el usuario lo ha activado Y el marcador esta
+         a la vista. Al perder el marcador se calla (si no, el aula entera
+         suena a corazones sin que nadie apunte a nada).
+       - El primer toque del boton es el gesto que desbloquea el audio en el
+         navegador; se aprovecha aunque el marcador todavia no este visible.
+       - La sincronia se mide contra el reloj real del mixer de la animacion.
+    --------------------------------------------------------------------- */
+    (function () {
+      var boton = document.getElementById('boton-sonido');
+      var texto = document.getElementById('texto-sonido');
+      var pista = document.getElementById('pista-sonido');
+      var entidad = document.getElementById('corazon');
+      var marcador = document.getElementById('marcador-corazon');
+
+      var audio = crearAudioLatido({ version: '1' });
+      var quiere = false;          // lo que ha pedido el usuario
+      var visible = false;         // marcador a la vista
+
+      function tiempoAnimacion() {
+        var c = entidad && entidad.components && entidad.components['animation-mixer'];
+        return (c && c.mixer) ? c.mixer.time : NaN;
+      }
+
+      function decir(t) {
+        if (!t) { pista.style.display = 'none'; return; }
+        pista.style.display = 'block';
+        pista.textContent = t;
+      }
+
+      function refrescar() {
+        var debe = quiere && visible && audio.disponible;
+        if (debe && !audio.sonando) { audio.arrancar(tiempoAnimacion()); }
+        if (!debe && audio.sonando) { audio.parar(); }
+
+        boton.classList.toggle('activo', quiere && audio.disponible);
+        if (!audio.disponible) { return; }
+        texto.textContent = quiere ? 'Sonido activado' : 'Toque para oír el latido';
+        if (quiere && !visible) { decir('Apunte al marcador para oír el latido.'); }
+        else { decir(''); }
+      }
+
+      boton.addEventListener('click', function () {
+        if (!audio.disponible) { return; }
+        quiere = !quiere;
+        if (quiere) {
+          // El play() va dentro del gesto: aunque el marcador no este visible,
+          // asi queda el audio desbloqueado para cuando aparezca.
+          audio.arrancar(tiempoAnimacion()).then(refrescar);
+        }
+        refrescar();
+      });
+
+      marcador.addEventListener('markerFound', function () { visible = true; refrescar(); });
+      marcador.addEventListener('markerLost', function () { visible = false; refrescar(); });
+
+      audio.listo.then(function (ok) {
+        if (ok) {
+          boton.disabled = false;
+          texto.textContent = 'Toque para oír el latido';
+          decir('');
+          audio.vigilar(tiempoAnimacion);
+        } else {
+          boton.disabled = true;
+          texto.textContent = 'Sonido no disponible';
+          decir('El audio del latido no está disponible; el modelo se ve igual.');
+          setTimeout(function () { decir(''); }, 6000);
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

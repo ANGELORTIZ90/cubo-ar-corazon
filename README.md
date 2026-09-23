@@ -89,6 +89,26 @@ En `index.html` el modelo se referencia así:
 Pages con su CDN— sigue sirviendo el GLB antiguo de la caché y parece que la
 actualización «no ha llegado».
 
+## Sonido de auscultación
+
+Los dos visores reproducen una **auscultación cardíaca real sincronizada con el latido**:
+`audio/latido-normal.ogg` (con `.mp3` de reserva), un ciclo exacto de **0,833333 s** con
+S1 en 0,100 s y S2 en 0,405 s. La lógica está en `audio-latido.js`, compartida por
+`index.html` y `vista-previa.html`.
+
+- **Hay que pulsar el botón de sonido.** El navegador no deja que una página emita audio
+  sin un gesto del usuario, así que el primer toque es el que lo desbloquea. No es un
+  fallo: es política del navegador y no se puede esquivar.
+- En el **visor AR** el latido suena solo mientras el marcador está a la vista; al perderlo
+  se silencia, para que un aula entera no acabe sonando a corazones.
+- En la **vista previa** el audio sigue los botones de velocidad y se para con «Pausa».
+- El bucle se **resincroniza contra el reloj de la animación**: dejar audio e imagen
+  sueltos acaba en desfase al cabo de un rato.
+- Si el archivo de audio falta o no carga, el visor sigue funcionando y el botón queda
+  deshabilitado con un aviso discreto.
+
+Origen y licencia del audio: `audio/LICENCIA-AUDIO.md` (CC0, Wikimedia Commons).
+
 ## Notas técnicas
 
 - **Animación.** El GLB trae un único clip llamado `latido` (bucle, 72 lpm ≈ 0,833 s por
