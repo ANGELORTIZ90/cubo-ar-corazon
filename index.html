@@ -63,6 +63,7 @@
     // (sacado por raycast en Blender desde la vista anterior). Color = sangre
     // que transporta: rojo oxigenada, azul no oxigenada.
     const ROJO = '#ff5b5b', AZUL = '#5aa9ff';
+    const ROTULOS_TAM = 0.5;   // tamano de los carteles (1 = original)
     const ROTULOS = [
       { t: 'Vena cava\nsuperior',   p: [-0.0261,  0.0594, 0.0120], c: AZUL },
       { t: 'Venas\npulmonares',     p: [-0.0432,  0.0248, 0.0047], c: ROJO },
@@ -124,9 +125,10 @@
         this.el.parentEl.appendChild(grupo);
         this.grupo = grupo;
         const CAR = 0.052, LINEA = 0.085;   // ancho medio de letra y alto de linea
+        const TAM = ROTULOS_TAM;
         this.items = ROTULOS.map(function (r) {
           const a = new T(r.p[0], r.p[1], r.p[2]).multiplyScalar(s).add(pos);
-          const punto = new THREE.Mesh(new THREE.SphereGeometry(0.018, 14, 10),
+          const punto = new THREE.Mesh(new THREE.SphereGeometry(0.012, 14, 10),
                                        new THREE.MeshBasicMaterial({ color: r.c }));
           punto.position.copy(a);
           const geo = new THREE.BufferGeometry().setFromPoints([a, a.clone()]);
@@ -138,6 +140,7 @@
           const alto = filas.length * LINEA + 0.06;
           const cartel = document.createElement('a-entity');
           cartel.setAttribute('mirar-camara', '');
+          cartel.setAttribute('scale', TAM + ' ' + TAM + ' ' + TAM);
           const fondo = document.createElement('a-plane');
           fondo.setAttribute('width', ancho);
           fondo.setAttribute('height', alto);
@@ -230,9 +233,9 @@
           // columna (desplazar todos por igual no crea solapes nuevos)
           let tope = Infinity, suma = 0;       // tope = borde inferior del anterior
           col.forEach(function (it) {
-            const media = it.alto / 2 * escala;
+            const media = it.alto * ROTULOS_TAM / 2 * escala;
             it.v = Math.min(it.u, tope - media);
-            tope = it.v - media - 0.035 * escala;
+            tope = it.v - media - 0.025 * escala;
             suma += it.u - it.v;
           });
           const sube = col.length ? suma / col.length : 0;
